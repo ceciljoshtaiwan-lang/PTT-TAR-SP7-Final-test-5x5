@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTT TAR SP7 - FINAL TASK</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a1a;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+            color: #ffffff;
+        }
+        
+        h1 { 
+            margin-bottom: 5px; 
+            color: #FFCC00; 
+            text-shadow: 2px 2px 0px #000;
+            font-family: 'Arial Black', Impact, sans-serif;
+        }
+        p.subtitle { color: #aaaaaa; margin-top: 0; margin-bottom: 20px; }
+        
+        #progress {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #FFCC00;
+            background: rgba(0,0,0,0.5);
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 1px solid #FFCC00;
+        }
+
+        /* 改為 5x5 的網格佈局 */
+        .board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); 
+            gap: 8px; /* 稍微縮小間距以適應 5x5 */
+            max-width: 450px; /* 稍微加寬以適應 5x5 */
+            margin: 0 auto;
+        }
+
+        .card {
+            aspect-ratio: 1; 
+            cursor: pointer;
+            perspective: 1000px;
+        }
+
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+            transform-style: preserve-3d;
+            position: relative;
+        }
+
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-face-down, .card-face-up {
+            position: absolute;
+            top: 0; 
+            left: 0; 
+            width: 100%;
+            height: 100%;
+            backface-visibility: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            border-radius: 4px; 
+            overflow: hidden; 
+        }
+
+        /* 👑 TAR 經典 Clue 牌背設計 👑 */
+        .card-face-down {
+            background-color: #FFCC00; 
+            border: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .tar-black-banner {
+            background-color: #000000;
+            width: 100%;
+            height: 48%; 
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 0 2px; /* 縮小 padding 以適應更小的格子 */
+            box-sizing: border-box;
+            overflow: hidden; 
+        }
+
+        .tar-line1 {
+            color: #ffffff;
+            font-family: 'Arial Black', Impact, sans-serif;
+            font-weight: 900;
+            font-size: clamp(5px, 1.4vw, 8.5px); /* 縮小字體以適應 5x5 */
+            letter-spacing: 0.5px; 
+            line-height: 1.2;
+            margin-bottom: 2px; 
+            white-space: nowrap; 
+            width: 100%;
+            text-align: center;
+        }
+
+        .tar-line2 {
+            color: #FFCC00;
+            font-family: 'Arial Black', Impact, sans-serif;
+            font-weight: 900;
+            font-size: clamp(9px, 2.4vw, 13px); /* 縮小字體以適應 5x5 */
+            letter-spacing: 2px; 
+            line-height: 1.1;
+            text-shadow: 1px 1px 0px rgba(0,0,0,0.5); 
+            white-space: nowrap; 
+            width: 100%;
+            text-align: center;
+        }
+
+        .card-face-up {
+            background-color: #ffffff;
+            transform: rotateY(180deg);
+            border: 3px solid #FFCC00; 
+            font-size: 2rem;
+            box-sizing: border-box;
+        }
+        
+        /* 針對空白混淆牌的特殊樣式：翻開後呈現暗色或透明感，表示無效 */
+        .card-face-up.decoy {
+            background-color: #333333;
+            border: 3px solid #666666;
+            color: #666666;
+            font-size: 1rem;
+        }
+
+        /* 彈出視窗與規則說明頁面共用設定 */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); 
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        .modal-content {
+            background: #1a1a1a;
+            border: 3px solid #FFCC00;
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+            max-width: 450px; 
+            width: 100%;
+            max-height: 90vh; 
+            overflow-y: auto; 
+            box-sizing: border-box;
+        }
+
+        .modal-content h2 {
+            color: #FFCC00;
+            font-family: 'Arial Black', sans-serif;
+            margin-top: 0;
+            margin-bottom: 20px;
+        }
+        strong {
+            color: #FFFF00; /* 更亮的純黃色 */
+        }
+        /* 規則說明的內部排版 */
+        .rule-text {
+            text-align: left;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            color: #e0e0e0;
+        }
+        
+        /* 置中與分行用的 class */
+        .text-center {
+            text-align: center;
+        }
+
+        /* 按鈕樣式 */
+        .btn {
+            background-color: #FFCC00;
+            color: #000000;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1rem;
+            font-family: 'Arial Black', sans-serif;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.2s, transform 0.1s;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            background-color: #e6b800;
+        }
+        
+        .btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* 遊戲畫面上的「回到規則說明」按鈕 */
+        .btn-rule-back {
+            background-color: transparent;
+            color: #aaaaaa;
+            border: 1px solid #aaaaaa;
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            border-radius: 4px;
+            margin-top: 20px;
+            cursor: pointer;
+        }
+        
+        .btn-rule-back:hover {
+            background-color: #333333;
+            color: #ffffff;
+        }
+
+        .modal-content img.qr-code {
+            max-width: 100%;
+            width: 200px;
+            height: auto;
+            margin-top: 20px;
+            border: 5px solid white;
+            box-sizing: border-box;
+        }
+        
+        /* 為了配合音樂播放加入一個開始畫面 */
+        #start-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #1a1a1a;
+            z-index: 200;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 🎵 音樂播放器隱藏區塊 (三首音樂) 🎵 -->
+    <audio id="rule-music" src="https://github.com/ceciljoshtaiwan-lang/PTT-TAR-SP7-Final-test/raw/refs/heads/main/rule.mp3" loop></audio>
+    <audio id="game-music" src="https://github.com/ceciljoshtaiwan-lang/PTT-TAR-SP7-Final-test/raw/refs/heads/main/race.mp3" loop></audio>
+    <audio id="win-music" src="https://github.com/ceciljoshtaiwan-lang/PTT-TAR-SP7-Final-test/raw/refs/heads/main/win.mp3"></audio>
+
+    <!-- 🚀 初始啟動畫面 (必須由玩家點擊才能開始播放音樂) -->
+    <div id="start-screen">
+        <h1 style="font-size: 2.5rem; margin-bottom: 30px;">PTT TAR SP7</h1>
+         <button class="btn" style="color: #ffffff; font-weight: 900; text-shadow: 2px 2px 0px #000;" onclick="startApp()">開始隱藏版FINAL TASK</button>
+    </div>
+
+    <!-- 🎯 規則說明頁面 -->
+    <div id="rule-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2>📜 遊戲規則說明</h2>
+            <div class="rule-text">
+                <p class="text-center">歡迎來到第二階段的FINAL TASK！<br>這是一場考驗記憶與順序的挑戰。</p>
+                <ol style="padding-left: 20px;">
+                    <li>接下來的遊戲畫面上共有 25 張牌，其中 16 張隱藏著<strong> 8 對</strong>曾經在比賽中<strong>同時存在</strong>的物件轉換成的符號。剩下 9 張是無效的空白牌</li>
+                    <li>你必須嚴格依照它們在<strong>賽事出現的順序</strong>依序翻出配對。</li>
+                    <li>每次點擊翻開兩張牌，若配對成功且順序正確，牌卡將保持翻開。若翻到空白牌也視為錯誤。</li>
+                    <li><strong>⚠️ 注意：</strong>若翻開的兩張牌無法配對，或未依它們在賽事出現的順序翻開，<strong>所有已翻開的牌卡將全部蓋上</strong>，進度重新歸零！</li>
+                </ol>
+                <p class="text-center">請仔細整理好腦中PTT TAR SP7的回憶，<br>準備好就點擊進入挑戰吧！</p>
+            </div>
+            
+            <button class="btn" onclick="startGame()">進入最終挑戰</button>
+        </div>
+    </div>
+
+    <!-- 🎮 遊戲主畫面 -->
+    <div id="game-container" style="display: none;">
+        <h1>PTT TAR SP7</h1>
+        <p class="subtitle">FINAL TASK：來回憶配對這趟旅程吧</p>
+        <div id="progress">目前解鎖進度: 0 / 8</div>
+        
+        <div class="board" id="game-board"></div>
+        
+        <button class="btn-rule-back" onclick="showRuleModal()">回到規則說明</button>
+    </div>
+
+    <!-- 🏆 破關畫面 -->
+    <div id="win-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h2>🏆 任務完成！</h2>
+            <p style="line-height: 1.6;">你已成功還原所有旅行記憶，<br>請掃描下方 QR Code 前往 FINISH LINE：</p>
+            <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=FinalDestinationClue" alt="QR Code">
+        </div>
+    </div>
+
+    <script>
+        // 8 組有順序的關聯卡片 (共 16 張)
+        const targetPairs = [
+            { pair: 1, content: "<img src='https://i.meee.com.tw/zFPKb9Y.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" }, { pair: 1, content: "<img src='https://i.meee.com.tw/ZaYYCF5.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" },
+            { pair: 2, content: "<img src='https://i.meee.com.tw/1dmWsp9.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" }, { pair: 2, content: "<img src='https://i.meee.com.tw/DhF0FYA.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" },
+            { pair: 3, content: "<img src='https://i.meee.com.tw/J0ZGseB.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" }, { pair: 3, content: "<img src='https://i.meee.com.tw/MFC9xSg.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" },
+            { pair: 4, content: "<img src='https://i.meee.com.tw/ubPTJbU.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" }, { pair: 4, content: "<img src='https://i.meee.com.tw/CjX6FJ0.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" },
+            { pair: 5, content: "<img src='https://i.meee.com.tw/WLxosaE.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" }, { pair: 5, content: "<img src='https://i.meee.com.tw/8pwpqKq.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" },
+            { pair: 6, content: "<img src='https://i.meee.com.tw/p1WkC4W.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" }, { pair: 6, content: "<img src='https://i.meee.com.tw/DKJQeWr.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" },
+            { pair: 7, content: "<img src='https://i.meee.com.tw/erJWpOu.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" }, { pair: 7, content: "<img src='https://i.meee.com.tw/M8bvLmg.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" },
+            { pair: 8, content: "<img src='https://i.meee.com.tw/KFNtRGH.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" }, { pair: 8, content: "<img src='https://i.meee.com.tw/ThXcEkZ.jpg' style='width:100%; height:100%; border-radius:10px; object-fit:cover;'>" } 
+        ];
+
+        // 9 張空白的混淆卡片 (pair: 0 代表錯誤干擾項)
+        const decoys = [
+            { pair: 0, content: "" }, { pair: 0, content: "" }, { pair: 0, content: "" },
+            { pair: 0, content: "" }, { pair: 0, content: "" }, { pair: 0, content: "" },
+            { pair: 0, content: "" }, { pair: 0, content: "" }, { pair: 0, content: "" }
+        ];
+
+        let allCards = [...targetPairs, ...decoys];
+        
+        let currentStep = 1;      
+        let flippedCards = [];    
+        let isLocked = false;     
+        
+        // --- 初始化頁面 ---
+        function initPage() {
+            initGame();
+        }
+
+        // --- 音樂切換輔助函數 ---
+        function playMusic(musicId) {
+            const ruleMusic = document.getElementById('rule-music');
+            const gameMusic = document.getElementById('game-music');
+            const winMusic = document.getElementById('win-music');
+            
+            // 先暫停所有音樂
+            ruleMusic.pause();
+            gameMusic.pause();
+            winMusic.pause();
+            
+            // 播放指定的音樂 (如果有設定網址的話)
+            const targetAudio = document.getElementById(musicId);
+            if(targetAudio && !targetAudio.getAttribute('src').includes('這裡貼上')) {
+                targetAudio.play().catch(e => console.log("音效播放失敗", e));
+            }
+        }
+
+        // --- 顯示/隱藏控制 ---
+        function startApp() {
+            // 隱藏初始畫面，顯示規則畫面
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('rule-modal').style.display = 'flex';
+            
+            // 播放規則音樂
+            playMusic('rule-music');
+        }
+
+        function startGame() {
+            document.getElementById('rule-modal').style.display = 'none';
+            document.getElementById('game-container').style.display = 'block';
+            
+            // 播放遊戲音樂
+            playMusic('game-music');
+        }
+        
+        function showRuleModal() {
+            document.getElementById('rule-modal').style.display = 'flex';
+            document.getElementById('game-container').style.display = 'none';
+            
+            // 回到規則時，重新播放規則音樂
+            playMusic('rule-music');
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function initGame() {
+            shuffle(allCards);
+            const board = document.getElementById('game-board');
+            board.innerHTML = '';
+            
+            currentStep = 1;
+            flippedCards = [];
+            isLocked = false;
+
+            allCards.forEach((cardData, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.classList.add('card');
+                cardEl.dataset.pair = cardData.pair; 
+                cardEl.dataset.index = index;
+
+                // 若為空白干擾牌，套用 .decoy 樣式
+                const faceUpClass = cardData.pair === 0 ? "card-face-up decoy" : "card-face-up";
+
+                cardEl.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-face-down">
+                            <div class="tar-black-banner">
+                                <div class="tar-line1">THE AMAZING</div>
+                                <div class="tar-line2">RACE</div>
+                            </div>
+                        </div>
+                        <div class="${faceUpClass}">${cardData.content}</div>
+                    </div>
+                `;
+
+                cardEl.addEventListener('click', onCardClick);
+                board.appendChild(cardEl);
+            });
+            
+            updateProgress(); 
+        }
+
+        function onCardClick() {
+            if (isLocked || this.classList.contains('flipped')) return;
+
+            this.classList.add('flipped');
+            flippedCards.push(this);
+
+            if (flippedCards.length === 2) {
+                isLocked = true;
+                checkMatch();
+            }
+        }
+
+        function checkMatch() {
+            const card1 = flippedCards[0];
+            const card2 = flippedCards[1];
+            
+            const pair1 = parseInt(card1.dataset.pair);
+            const pair2 = parseInt(card2.dataset.pair);
+
+            if (pair1 === currentStep && pair2 === currentStep) {
+                currentStep++;        
+                flippedCards = [];    
+                isLocked = false;     
+                updateProgress();
+
+                if (currentStep > 8) {
+                    setTimeout(() => {
+                        // 破關時播放勝利音樂
+                        playMusic('win-music');
+                        document.getElementById('win-modal').style.display = 'flex'; 
+                    }, 500);
+                }
+            } else {
+                setTimeout(() => {
+                    const allFlipped = document.querySelectorAll('.card.flipped');
+                    allFlipped.forEach(card => card.classList.remove('flipped')); 
+                    
+                    currentStep = 1;
+                    flippedCards = [];
+                    updateProgress();
+                    isLocked = false; 
+                }, 1200);
+            }
+        }
+
+        function updateProgress() {
+            const displayStep = currentStep > 8 ? 8 : currentStep - 1;
+            document.getElementById('progress').innerText = `目前解鎖進度: ${displayStep} / 8`;
+        }
+
+        initPage();
+    </script>
+</body>
+</html>
