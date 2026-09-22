@@ -234,15 +234,6 @@
             background-color: #333333;
             color: #ffffff;
         }
-
-        .modal-content img.qr-code {
-            max-width: 100%;
-            width: 200px;
-            height: auto;
-            margin-top: 20px;
-            border: 5px solid white;
-            box-sizing: border-box;
-        }
         
         /* 為了配合音樂播放加入一個開始畫面 */
         #start-screen {
@@ -259,15 +250,14 @@
 </head>
 <body>
 
-    <!-- 🎵 音樂播放器隱藏區塊 (三首音樂) 🎵 -->
+    <!-- 🎵 音樂播放器隱藏區塊 (只保留規則與遊戲音樂) 🎵 -->
     <audio id="rule-music" src="https://github.com/ceciljoshtaiwan-lang/PTT-TAR-SP7-Final-test/raw/refs/heads/main/rule.mp3" loop></audio>
     <audio id="game-music" src="https://github.com/ceciljoshtaiwan-lang/PTT-TAR-SP7-Final-test/raw/refs/heads/main/race.mp3" loop></audio>
-    <audio id="win-music" src="https://github.com/ceciljoshtaiwan-lang/PTT-TAR-SP7-Final-test/raw/refs/heads/main/win.mp3"></audio>
 
     <!-- 🚀 初始啟動畫面 (必須由玩家點擊才能開始播放音樂) -->
     <div id="start-screen">
         <h1 style="font-size: 2.5rem; margin-bottom: 30px;">PTT TAR SP7</h1>
-         <button class="btn" style="color: #ffffff; font-weight: 900; text-shadow: 2px 2px 0px #000;" onclick="startApp()">開始隱藏版FINAL TASK</button>
+        <button class="btn" style="color: #ffffff; font-weight: 900; -webkit-text-stroke: 1px #000; text-shadow: 2px 2px 0px #000;" onclick="startApp()">開始隱藏版FINAL TASK</button>
     </div>
 
     <!-- 🎯 規則說明頁面 -->
@@ -301,12 +291,17 @@
         <button class="btn-rule-back" onclick="showRuleModal()">回到規則說明</button>
     </div>
 
-    <!-- 🏆 破關畫面 -->
+    <!-- 🏆 破關畫面 (改為影片版本) -->
     <div id="win-modal" class="modal-overlay" style="display: none;">
         <div class="modal-content">
             <h2>🏆 任務完成！</h2>
-            <p style="line-height: 1.6;">你已成功還原所有旅行記憶，<br>請掃描下方 QR Code 前往 FINISH LINE：</p>
-            <img class="qr-code" src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=FinalDestinationClue" alt="QR Code">
+            <p style="line-height: 1.6;">你已成功還原所有旅行記憶，<br>點擊播放影片，前往你們的 FINISH LINE：</p>
+            
+            <!-- 🎬 終點影片區塊 🎬 -->
+            <video id="finish-video" controls playsinline style="width: 100%; border: 3px solid white; border-radius: 8px; margin-top: 15px; box-sizing: border-box; background-color: #000;">
+                <source src="https://github.com/ceciljoshtaiwan-lang/PTT-TAR-SP7-Final-test/raw/refs/heads/main/%E7%B5%82%E9%BB%9E.mp4" type="video/mp4">
+                你的瀏覽器不支援影片播放。
+            </video>
         </div>
     </div>
 
@@ -345,17 +340,17 @@
         function playMusic(musicId) {
             const ruleMusic = document.getElementById('rule-music');
             const gameMusic = document.getElementById('game-music');
-            const winMusic = document.getElementById('win-music');
             
             // 先暫停所有音樂
-            ruleMusic.pause();
-            gameMusic.pause();
-            winMusic.pause();
+            if(ruleMusic) ruleMusic.pause();
+            if(gameMusic) gameMusic.pause();
             
-            // 播放指定的音樂 (如果有設定網址的話)
-            const targetAudio = document.getElementById(musicId);
-            if(targetAudio && !targetAudio.getAttribute('src').includes('這裡貼上')) {
-                targetAudio.play().catch(e => console.log("音效播放失敗", e));
+            // 如果有傳入指定的 musicId 才播放（傳入 null 則只暫停，適合破關時切斷背景音樂用）
+            if(musicId) {
+                const targetAudio = document.getElementById(musicId);
+                if(targetAudio && !targetAudio.getAttribute('src').includes('這裡貼上')) {
+                    targetAudio.play().catch(e => console.log("音效播放失敗", e));
+                }
             }
         }
 
@@ -456,8 +451,8 @@
 
                 if (currentStep > 8) {
                     setTimeout(() => {
-                        // 破關時播放勝利音樂
-                        playMusic('win-music');
+                        // 破關時，切斷遊戲背景音樂，並顯示終點影片畫面
+                        playMusic(null);
                         document.getElementById('win-modal').style.display = 'flex'; 
                     }, 500);
                 }
